@@ -4,12 +4,12 @@ URL Shortener REST API
 
 ## API Description
 
-### Authentication entry points
+### Authentication end points
 
 * `POST /auth/register`
 * `POST /auth/login`
 
-### Account URL service entry points (require authentication)
+### Account URL service end points (require authentication)
 
 * `POST /api/v1/account/links`
 * `GET /api/v1/account/links`
@@ -17,7 +17,7 @@ URL Shortener REST API
 * `PATCH /api/v1/account/links/{id}`
 * `DELETE /api/v1/account/links/{id}`
 
-### URL service entry point
+### URL service end point
 
 * `GET /link/{uniqueId}`
 
