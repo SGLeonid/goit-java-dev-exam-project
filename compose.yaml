@@ -12,6 +12,9 @@ services:
       - DB_NAME=url_shortener_db
       - DB_USER=${DB_USER}
       - DB_PASSWORD=${DB_PASSWORD}
+      - SECRET_KEY=${SECRET_KEY}
+      - EXPIRATION_TIME=${EXPIRATION_TIME}
+      - APP_BASE_URL=${APP_BASE_URL}
     depends_on:
       db:
         condition: service_healthy
@@ -30,7 +33,7 @@ services:
     volumes:
       - postgres-data:/var/lib/postgresql
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U admin -d url_shortener_db"]
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d url_shortener_db"]
       interval: 5s
       timeout: 5s
       retries: 5

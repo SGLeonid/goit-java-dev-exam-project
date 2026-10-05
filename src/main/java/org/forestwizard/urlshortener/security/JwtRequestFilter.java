@@ -1,6 +1,8 @@
 package org.forestwizard.urlshortener.security;
 
 import io.jsonwebtoken.ExpiredJwtException;
+import io.jsonwebtoken.MalformedJwtException;
+import io.jsonwebtoken.security.SignatureException;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -63,16 +65,25 @@ public class JwtRequestFilter extends BasicAuthenticationFilter {
                 }
             }
         } catch (ExpiredJwtException _) {
-            ObjectMapper mapper = new ObjectMapper();
-            String json = mapper.writeValueAsString(new StatusResponse(Status.SESSION_EXPIRED));
-
-            response.setStatus(403);
-            response.setContentType("application/json");
-            response.getWriter().println(json);
-            response.getWriter().close();
+            setResponse(response, Status.SESSION_EXPIRED);
+            return;
+        } catch (MalformedJwtException _) {
+            setResponse(response, Status.SESSION_MALFORMED);
+            return;
+        } catch (SignatureException _) {
+            setResponse(response, Status.SESSION_INTERNAL_ERROR);
             return;
         }
 
         chain.doFilter(request, response);
+    }
+
+    private void setResponse(HttpServletResponse response, Status status) throws IOException {
+        ObjectMapper mapper = new ObjectMapper();
+        String json = mapper.writeValueAsString(new StatusResponse(status));
+        response.setStatus(401);
+        response.setContentType("application/json");
+        response.getWriter().println(json);
+        response.getWriter().close();
     }
 }

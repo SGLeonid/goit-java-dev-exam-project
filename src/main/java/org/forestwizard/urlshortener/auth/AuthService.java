@@ -48,11 +48,11 @@ public class AuthService implements IAuthService {
         try {
             user = userDetailsService.loadUserByUsername(request.getUsername());
         } catch (UsernameNotFoundException e) {
-            throw new AuthenticationException(Status.SUCH_USER_NOT_EXISTS, e);
+            throw new AuthenticationException(Status.INVALID_USERNAME_OR_PASSWORD, e);
         }
 
         if (!passwordEncoder.matches(request.getPassword(), user.getPassword())) {
-            throw new AuthenticationException(Status.INVALID_PASSWORD);
+            throw new AuthenticationException(Status.INVALID_USERNAME_OR_PASSWORD);
         }
 
         String jwt = jwtService.generateToken(request.getUsername());

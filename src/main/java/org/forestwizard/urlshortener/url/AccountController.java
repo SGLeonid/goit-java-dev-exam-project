@@ -1,6 +1,7 @@
 package org.forestwizard.urlshortener.url;
 
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.ExampleObject;
 import io.swagger.v3.oas.annotations.media.Schema;
@@ -31,8 +32,12 @@ public class AccountController {
             content = @Content(mediaType = "application/json", schema = @Schema(implementation = UrlListResponse.class))
     )
     @GetMapping("/links")
-    public ResponseEntity<UrlListResponse> getUrlListByUsername(Principal principal) {
-        UrlListResponse response = urlService.getAllByUsername(principal.getName());
+    public ResponseEntity<UrlListResponse> getUrlListByUsername(
+            Principal principal,
+            @Parameter(name = "show_expired", description = "Determines whether expired URLs are included")
+            @RequestParam(name = "show_expired", defaultValue = "false", required = false) Boolean showExpired
+    ) {
+        UrlListResponse response = urlService.getAllByUsername(principal.getName(), showExpired);
         return new ResponseEntity<>(response, HttpStatus.OK);
     }
 
@@ -120,7 +125,10 @@ public class AccountController {
             examples = @ExampleObject(value = "{\"error\":\"SUCH_URL_NOT_EXISTS\"}")
     ))
     @DeleteMapping("/links/{id}")
-    public ResponseEntity<StatusResponse> deleteUrlByUsernameAndId(Principal principal, @PathVariable("id") Long id) {
+    public ResponseEntity<StatusResponse> deleteUrlByUsernameAndId(
+            Principal principal,
+            @PathVariable("id") Long id
+    ) {
         StatusResponse response = urlService.deleteByUsernameAndId(principal.getName(), id);
         return new ResponseEntity<>(response, HttpStatus.OK);
     }

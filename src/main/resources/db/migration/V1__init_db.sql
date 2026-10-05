@@ -8,10 +8,10 @@ CREATE TABLE IF NOT EXISTS auth_user (
 );
 
 CREATE TABLE IF NOT EXISTS shortened_url (
-    id BIGSERIAL NOT NULL,
+    id BIGSERIAL PRIMARY KEY NOT NULL,
     username VARCHAR(255) NOT NULL,
-    original_url VARCHAR(255) NOT NULL,
-    short_url VARCHAR(255) NOT NULL,
+    original_url TEXT NOT NULL,
+    short_url VARCHAR(255) UNIQUE NOT NULL,
     created_at TIMESTAMP WITH TIME ZONE NOT NULL,
     expires_at TIMESTAMP WITH TIME ZONE NOT NULL,
     visit_times BIGINT NOT NULL,

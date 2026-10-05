@@ -6,6 +6,7 @@ import org.forestwizard.urlshortener.auth.Role;
 import org.forestwizard.urlshortener.exception.*;
 import org.forestwizard.urlshortener.status.Status;
 import org.forestwizard.urlshortener.url.*;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -40,17 +41,36 @@ class UrlServiceTest {
     @InjectMocks
     private UrlService urlService;
 
+    @BeforeEach
+    void setUp() {
+        urlService = new UrlService("http://localhost:8080", userRepository, shortenedUrlRepository);
+    }
+
     @Test
     void testGetAllByUsername() {
         AuthUser user = new AuthUser("ForestWizard", "PassWord1234", Role.USER);
-        ShortenedUrl shortenedUrl = ShortenedUrl.builder().id(1L).user(user).build();
+        ShortenedUrl shortenedUrl = ShortenedUrl.builder()
+                .id(1L)
+                .user(user)
+                .originalUrl(TEST_EXAMPLE_ORIGINAL_URL)
+                .shortUrl(TEST_EXAMPLE_SHORT_URL)
+                .createdAt(TEST_EXAMPLE_CREATE_DATE)
+                .expiresAt(TEST_EXAMPLE_CREATE_DATE.plusMinutes(60))
+                .build();
+        UrlDTO urlDto = UrlDTO.builder()
+                .id(1L)
+                .originalUrl(TEST_EXAMPLE_ORIGINAL_URL)
+                .shortUrl(TEST_EXAMPLE_SHORT_URL)
+                .createdAt(TEST_EXAMPLE_CREATE_DATE)
+                .expiresAt(TEST_EXAMPLE_CREATE_DATE.plusMinutes(60))
+                .build();
         given(userRepository.existsByUsername("ForestWizard")).willReturn(true);
         given(shortenedUrlRepository.findAllByUsername("ForestWizard")).willReturn(List.of(shortenedUrl));
 
-        UrlListResponse response = assertDoesNotThrow(() -> urlService.getAllByUsername("ForestWizard"));
+        UrlListResponse response = assertDoesNotThrow(() -> urlService.getAllByUsername("ForestWizard", true));
         assertNotNull(response);
         assertEquals(Status.OK, response.getError());
-        assertEquals(List.of(shortenedUrl), response.getUrls());
+        assertEquals(List.of(urlDto), response.getUrls());
 
         verify(userRepository).existsByUsername("ForestWizard");
         verify(shortenedUrlRepository).findAllByUsername("ForestWizard");
@@ -60,9 +80,9 @@ class UrlServiceTest {
     void testGetAllByUsernameThrowsExceptions() {
         given(userRepository.existsByUsername("ForestWizard")).willReturn(false);
         UsernameNotFoundException exception = assertThrows(UsernameNotFoundException.class,
-                () -> urlService.getAllByUsername("ForestWizard")
+                () -> urlService.getAllByUsername("ForestWizard", false)
         );
-        assertEquals(Status.SUCH_USER_NOT_EXISTS, exception.getStatus());
+        assertEquals(Status.UNAUTHORIZED_REQUEST, exception.getStatus());
         verify(userRepository).existsByUsername("ForestWizard");
     }
 
@@ -71,7 +91,7 @@ class UrlServiceTest {
     void testGetByUsernameAndId() {
         AuthUser user = new AuthUser("ForestWizard", "PassWord1234", Role.USER);
         ShortenedUrl shortenedUrl = ShortenedUrl.builder().id(1L).user(user).build();
-        UrlResponse expectedResponse = new UrlResponse(Status.OK, "ForestWizard", shortenedUrl);
+        UrlResponse expectedResponse = UrlResponse.of(Status.OK, "ForestWizard", shortenedUrl);
 
         given(userRepository.existsByUsername("ForestWizard")).willReturn(true);
         given(shortenedUrlRepository.findByUsernameAndId("ForestWizard", 1L)).willReturn(Optional.of(shortenedUrl));
@@ -90,7 +110,7 @@ class UrlServiceTest {
         UsernameNotFoundException exception = assertThrows(UsernameNotFoundException.class,
                 () -> urlService.getByUsernameAndId("ForestWizard", 1L)
         );
-        assertEquals(Status.SUCH_USER_NOT_EXISTS, exception.getStatus());
+        assertEquals(Status.UNAUTHORIZED_REQUEST, exception.getStatus());
         verify(userRepository).existsByUsername("ForestWizard");
     }
 
@@ -110,11 +130,10 @@ class UrlServiceTest {
     void testCreate() {
         AuthUser user = new AuthUser("ForestWizard", "PassWord1234", Role.USER);
         ShortenedUrl shortenedUrl = ShortenedUrl.builder().id(1L).user(user).build();
-        UrlResponse expectedResponse = new UrlResponse(Status.OK, "ForestWizard", shortenedUrl);
+        UrlResponse expectedResponse = UrlResponse.of(Status.OK, "ForestWizard", shortenedUrl);
 
         given(userRepository.findByUsername("ForestWizard")).willReturn(Optional.of(user));
-        given(shortenedUrlRepository.existsByShortUrl(any(String.class))).willReturn(false);
-        given(shortenedUrlRepository.save(any(ShortenedUrl.class))).willReturn(shortenedUrl);
+        given(shortenedUrlRepository.saveAndFlush(any(ShortenedUrl.class))).willReturn(shortenedUrl);
 
         UrlResponse response = assertDoesNotThrow(
                 () -> urlService.create("ForestWizard", new UrlCreateRequest(TEST_EXAMPLE_ORIGINAL_URL, 60))
@@ -122,8 +141,7 @@ class UrlServiceTest {
         assertEquals(expectedResponse, response);
 
         verify(userRepository).findByUsername("ForestWizard");
-        verify(shortenedUrlRepository).existsByShortUrl(any(String.class));
-        verify(shortenedUrlRepository).save(any(ShortenedUrl.class));
+        verify(shortenedUrlRepository).saveAndFlush(any(ShortenedUrl.class));
     }
 
     @Test
@@ -132,7 +150,7 @@ class UrlServiceTest {
         UsernameNotFoundException exception = assertThrows(UsernameNotFoundException.class,
                 () -> urlService.create("ForestWizard", new UrlCreateRequest(TEST_EXAMPLE_ORIGINAL_URL, 60))
         );
-        assertEquals(Status.SUCH_USER_NOT_EXISTS, exception.getStatus());
+        assertEquals(Status.UNAUTHORIZED_REQUEST, exception.getStatus());
         verify(userRepository).findByUsername("ForestWizard");
     }
 
@@ -146,7 +164,7 @@ class UrlServiceTest {
                 .createdAt(TEST_EXAMPLE_CREATE_DATE)
                 .expiresAt(TEST_EXAMPLE_CREATE_DATE.plusMinutes(60))
                 .build();
-        UrlResponse expectedResponse = new UrlResponse(Status.OK, "ForestWizard", expectedUrl);
+        UrlResponse expectedResponse = UrlResponse.of(Status.OK, "ForestWizard", expectedUrl);
 
         given(userRepository.existsByUsername("ForestWizard")).willReturn(true);
         given(shortenedUrlRepository.findCreatedAtByUsernameAndId("ForestWizard", 1L)).willReturn(
@@ -181,7 +199,7 @@ class UrlServiceTest {
         UsernameNotFoundException exception = assertThrows(UsernameNotFoundException.class,
                 () -> urlService.update("ForestWizard", 1L, new UrlCreateRequest(TEST_EXAMPLE_NEW_ORIGINAL_URL, 60))
         );
-        assertEquals(Status.SUCH_USER_NOT_EXISTS, exception.getStatus());
+        assertEquals(Status.UNAUTHORIZED_REQUEST, exception.getStatus());
         verify(userRepository).existsByUsername("ForestWizard");
     }
 
@@ -223,7 +241,7 @@ class UrlServiceTest {
         UsernameNotFoundException exception = assertThrows(UsernameNotFoundException.class,
                 () -> urlService.deleteByUsernameAndId("ForestWizard", 1L)
         );
-        assertEquals(Status.SUCH_USER_NOT_EXISTS, exception.getStatus());
+        assertEquals(Status.UNAUTHORIZED_REQUEST, exception.getStatus());
         verify(userRepository).existsByUsername("ForestWizard");
     }
 

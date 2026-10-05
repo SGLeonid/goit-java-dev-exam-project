@@ -14,6 +14,9 @@ public interface IShortenedUrlRepository extends JpaRepository<ShortenedUrl, Lon
     @Query(value = "SELECT * FROM url_shortener_db.shortened_url WHERE username = :username", nativeQuery = true)
     List<ShortenedUrl> findAllByUsername(@Param("username") String username);
 
+    @Query(value = "SELECT * FROM url_shortener_db.shortened_url WHERE username = :username AND expires_at > CURRENT_TIMESTAMP", nativeQuery = true)
+    List<ShortenedUrl> findAllValidByUsername(@Param("username") String username);
+
     @Query(
             value = "SELECT * FROM url_shortener_db.shortened_url WHERE username = :username AND id = :id",
             nativeQuery = true

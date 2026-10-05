@@ -14,5 +14,18 @@ public class UrlListResponse {
     @Enumerated(EnumType.STRING)
     private final Status error;
     private final String createdBy;
-    private final List<ShortenedUrl> urls;
+    private final List<UrlDTO> urls;
+
+    public static UrlListResponse of(Status error, String createdBy, List<ShortenedUrl> urls) {
+        List<UrlDTO> urlList = urls.stream().map(url -> UrlDTO.builder()
+                .id(url.getId())
+                .shortUrl(url.getShortUrl())
+                .originalUrl(url.getOriginalUrl())
+                .createdAt(url.getCreatedAt())
+                .expiresAt(url.getExpiresAt())
+                .visitTimes(url.getVisitTimes())
+                .build()
+        ).toList();
+        return new UrlListResponse(error, createdBy, urlList);
+    }
 }

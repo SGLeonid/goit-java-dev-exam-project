@@ -27,7 +27,8 @@ import static org.junit.jupiter.api.Assertions.*;
 @Import(TestcontainersConfiguration.class)
 class ShortenedUrlRepositoryTest {
     private static final String TEST_EXAMPLE_ORIGINAL_URL = "https://www.baeldung.com/rest-versioning";
-    private static final String TEST_EXAMPLE_SHORT_URL = "http://localhost:8080/h4xs8g3";
+    private static final String TEST_EXAMPLE_SHORT_URL_1 = "http://localhost:8080/h4xs8g3";
+    private static final String TEST_EXAMPLE_SHORT_URL_2 = "http://localhost:8080/dg8f3aq";
     private static final String TEST_EXAMPLE_NEW_ORIGINAL_URL = "https://www.baeldung.com/mockito-series";
     private static final OffsetDateTime TEST_EXAMPLE_CREATE_DATE = OffsetDateTime
             .now(TimeZone.getTimeZone("UTC").toZoneId())
@@ -49,11 +50,12 @@ class ShortenedUrlRepositoryTest {
     void setUp() {
         AuthUser user = new AuthUser("ForestWizard", "PassWord1234", Role.USER);
         userRepository.save(user);
-
-        OffsetDateTime createdAt = TEST_EXAMPLE_CREATE_DATE;
-        OffsetDateTime expiresAt = createdAt.plusMinutes(60);
-
-        ShortenedUrl url = createShortUrl(user, createdAt, expiresAt);
+        ShortenedUrl url = createShortUrl(
+                user,
+                TEST_EXAMPLE_SHORT_URL_1,
+                TEST_EXAMPLE_CREATE_DATE,
+                TEST_EXAMPLE_CREATE_DATE.plusMinutes(60)
+        );
         shortenedUrlRepository.save(url);
     }
 
@@ -79,6 +81,7 @@ class ShortenedUrlRepositoryTest {
                 .truncatedTo(ChronoUnit.MICROS);
         ShortenedUrl url = assertDoesNotThrow(() -> shortenedUrlRepository.save(createShortUrl(
                 userOptional.get(),
+                TEST_EXAMPLE_SHORT_URL_2,
                 createdAt,
                 createdAt.plusMinutes(60)
         )));
@@ -97,9 +100,7 @@ class ShortenedUrlRepositoryTest {
                 .now(TimeZone.getTimeZone("UTC").toZoneId())
                 .truncatedTo(ChronoUnit.MICROS);
         ShortenedUrl url = assertDoesNotThrow(() -> shortenedUrlRepository.save(createShortUrl(
-                userOptional.get(),
-                createdAt,
-                createdAt.plusMinutes(60)
+                userOptional.get(), TEST_EXAMPLE_SHORT_URL_2, createdAt, createdAt.plusMinutes(60)
         )));
         Optional<Instant> instantOptional = assertDoesNotThrow(() ->shortenedUrlRepository.findCreatedAtByUsernameAndId(
                 "ForestWizard", url.getId()
@@ -118,7 +119,12 @@ class ShortenedUrlRepositoryTest {
         OffsetDateTime createdAt = OffsetDateTime
                 .now(TimeZone.getTimeZone("UTC").toZoneId())
                 .truncatedTo(ChronoUnit.MICROS);
-        ShortenedUrl url = createShortUrl(userOptional.get(), createdAt, createdAt.plusMinutes(60));
+        ShortenedUrl url = createShortUrl(
+                userOptional.get(),
+                TEST_EXAMPLE_SHORT_URL_2,
+                createdAt,
+                createdAt.plusMinutes(60)
+        );
         url = entityManager.persistAndFlush(url);
         OffsetDateTime newExpirationTime = url.getCreatedAt().plusMinutes(240);
         long id = url.getId();
@@ -149,7 +155,12 @@ class ShortenedUrlRepositoryTest {
         OffsetDateTime createdAt = OffsetDateTime
                 .now(TimeZone.getTimeZone("UTC").toZoneId())
                 .truncatedTo(ChronoUnit.MICROS);
-        ShortenedUrl url = createShortUrl(userOptional.get(), createdAt, createdAt.plusMinutes(60));
+        ShortenedUrl url = createShortUrl(
+                userOptional.get(),
+                TEST_EXAMPLE_SHORT_URL_2,
+                createdAt,
+                createdAt.plusMinutes(60)
+        );
         url = entityManager.persistAndFlush(url);
         long countBeforeIncrement = url.getVisitTimes();
         int updatedRows = shortenedUrlRepository.incrementUrlVisitTimesById(url.getId());
@@ -168,13 +179,13 @@ class ShortenedUrlRepositoryTest {
     @Test
     void testFindsByShortUrl() {
         Optional<ShortenedUrl> savedUrlOptional = assertDoesNotThrow(
-                () -> shortenedUrlRepository.findByShortUrl(TEST_EXAMPLE_SHORT_URL)
+                () -> shortenedUrlRepository.findByShortUrl(TEST_EXAMPLE_SHORT_URL_1)
         );
         assertTrue(savedUrlOptional.isPresent());
         ShortenedUrl savedUrl = savedUrlOptional.get();
 
         assertEquals(new AuthUser("ForestWizard", "PassWord1234", Role.USER), savedUrl.getUser());
-        assertEquals(TEST_EXAMPLE_SHORT_URL, savedUrl.getShortUrl());
+        assertEquals(TEST_EXAMPLE_SHORT_URL_1, savedUrl.getShortUrl());
         assertEquals(TEST_EXAMPLE_ORIGINAL_URL, savedUrl.getOriginalUrl());
         assertEquals(TEST_EXAMPLE_CREATE_DATE, savedUrl.getCreatedAt());
         assertEquals(TEST_EXAMPLE_CREATE_DATE.plusMinutes(60), savedUrl.getExpiresAt());
@@ -183,15 +194,20 @@ class ShortenedUrlRepositoryTest {
 
     @Test
     void testExistsByShortUrl() {
-        boolean exists = assertDoesNotThrow(() -> shortenedUrlRepository.existsByShortUrl(TEST_EXAMPLE_SHORT_URL));
+        boolean exists = assertDoesNotThrow(() -> shortenedUrlRepository.existsByShortUrl(TEST_EXAMPLE_SHORT_URL_1));
         assertTrue(exists);
     }
 
-    private ShortenedUrl createShortUrl(AuthUser user, OffsetDateTime createdAt, OffsetDateTime expiresAt) {
+    private ShortenedUrl createShortUrl(
+            AuthUser user,
+            String shortUrl,
+            OffsetDateTime createdAt,
+            OffsetDateTime expiresAt
+    ) {
         return ShortenedUrl.builder()
                 .user(user)
                 .originalUrl(TEST_EXAMPLE_ORIGINAL_URL)
-                .shortUrl(TEST_EXAMPLE_SHORT_URL)
+                .shortUrl(shortUrl)
                 .createdAt(createdAt)
                 .expiresAt(expiresAt)
                 .visitTimes(0L)

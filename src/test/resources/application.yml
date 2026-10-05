@@ -4,14 +4,10 @@ spring:
     baseline-on-migrate: true
     schemas: url_shortener_db
 
-  datasource:
-    url: jdbc:tc:postgresql:latest:///testdb
-    username: test
-    password: test
-
   jpa:
-    database-platform: org.hibernate.dialect.PostgreSQLDialect
     open-in-view: true
+    hibernate:
+      ddl-auto: validate
     properties:
       hibernate:
         default_schema: url_shortener_db
@@ -20,3 +16,5 @@ springwebapp:
   security:
     secret_key: TESTKEYTESTKEYTESTKEYTESTKEYTESTKEYTESTKEYTESTKEY
     expiration_time: 60000
+  app:
+    base_url: http://localhost:8080

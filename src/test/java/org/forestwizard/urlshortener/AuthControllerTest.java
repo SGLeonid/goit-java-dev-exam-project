@@ -56,7 +56,7 @@ class AuthControllerTest {
         AuthRequest request = new AuthRequest("ForestWizard", "PassWord1234");
         String json = objectMapper.writer().withDefaultPrettyPrinter().writeValueAsString(request);
 
-        MvcResult registerResult = mockMvc.perform(MockMvcRequestBuilders.post("/auth/register")
+        MvcResult registerResult = mockMvc.perform(MockMvcRequestBuilders.post("/api/v1/auth/register")
                 .contentType(APPLICATION_JSON_UTF8)
                 .content(json)
         ).andExpect(status().isCreated()).andExpect(content().contentType("application/json")).andReturn();
@@ -65,7 +65,7 @@ class AuthControllerTest {
         assertEquals(Status.OK, registerResponse.getError());
         assertFalse(() -> registerResponse.getToken().trim().isEmpty());
 
-        MvcResult loginResult = mockMvc.perform(MockMvcRequestBuilders.post("/auth/login")
+        MvcResult loginResult = mockMvc.perform(MockMvcRequestBuilders.post("/api/v1/auth/login")
                 .contentType(APPLICATION_JSON_UTF8)
                 .content(json)
         ).andExpect(status().isOk()).andExpect(content().contentType("application/json")).andReturn();
@@ -83,7 +83,7 @@ class AuthControllerTest {
         String responseJson;
         StatusResponse registerResponse;
 
-        result = mockMvc.perform(MockMvcRequestBuilders.post("/auth/register").contentType(APPLICATION_JSON_UTF8))
+        result = mockMvc.perform(MockMvcRequestBuilders.post("/api/v1/auth/register").contentType(APPLICATION_JSON_UTF8))
                 .andExpect(status().isBadRequest())
                 .andExpect(content().contentType("application/json"))
                 .andReturn();
@@ -91,7 +91,7 @@ class AuthControllerTest {
         registerResponse = objectMapper.readValue(responseJson, StatusResponse.class);
         assertEquals(Status.REQUEST_BODY_BAD_OR_MISSING, registerResponse.getError());
 
-        result = mockMvc.perform(MockMvcRequestBuilders.post("/auth/register")
+        result = mockMvc.perform(MockMvcRequestBuilders.post("/api/v1/auth/register")
                 .contentType(APPLICATION_JSON_UTF8)
                 .content(json)
         ).andExpect(status().isBadRequest()).andExpect(content().contentType("application/json")).andReturn();
@@ -105,7 +105,7 @@ class AuthControllerTest {
         userRepository.save(new AuthUser("ForestWizard", "PassWord1234", Role.USER));
         AuthRequest request = new AuthRequest("ForestWizard", "PassWord1234");
         String json = objectMapper.writer().withDefaultPrettyPrinter().writeValueAsString(request);
-        MvcResult registerResult = mockMvc.perform(MockMvcRequestBuilders.post("/auth/register")
+        MvcResult registerResult = mockMvc.perform(MockMvcRequestBuilders.post("/api/v1/auth/register")
                 .contentType(APPLICATION_JSON_UTF8)
                 .content(json)
         ).andExpect(status().isForbidden()).andExpect(content().contentType("application/json")).andReturn();
@@ -119,12 +119,12 @@ class AuthControllerTest {
         userRepository.save(new AuthUser("ForestWizard", "PassWord1234", Role.USER));
         AuthRequest request = new AuthRequest("ForestWizard", "PassWord1111");
         String json = objectMapper.writer().withDefaultPrettyPrinter().writeValueAsString(request);
-        MvcResult registerResult = mockMvc.perform(MockMvcRequestBuilders.post("/auth/login")
+        MvcResult registerResult = mockMvc.perform(MockMvcRequestBuilders.post("/api/v1/auth/login")
                 .contentType(APPLICATION_JSON_UTF8)
                 .content(json)
-        ).andExpect(status().isForbidden()).andExpect(content().contentType("application/json")).andReturn();
+        ).andExpect(status().isUnauthorized()).andExpect(content().contentType("application/json")).andReturn();
         String registerResponseJson = registerResult.getResponse().getContentAsString();
         StatusResponse registerResponse = objectMapper.readValue(registerResponseJson, StatusResponse.class);
-        assertEquals(Status.INVALID_PASSWORD, registerResponse.getError());
+        assertEquals(Status.INVALID_USERNAME_OR_PASSWORD, registerResponse.getError());
     }
 }

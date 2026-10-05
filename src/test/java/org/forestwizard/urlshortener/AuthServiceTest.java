@@ -85,7 +85,7 @@ class AuthServiceTest {
         AuthenticationException exception = assertThrows(AuthenticationException.class,
                 () -> authService.login(request)
         );
-        assertEquals(Status.SUCH_USER_NOT_EXISTS, exception.getStatus());
+        assertEquals(Status.INVALID_USERNAME_OR_PASSWORD, exception.getStatus());
     }
 
     @Test
@@ -96,7 +96,7 @@ class AuthServiceTest {
         AuthenticationException exception = assertThrows(AuthenticationException.class,
                 () -> authService.login(loginRequest)
         );
-        assertEquals(Status.INVALID_PASSWORD, exception.getStatus());
+        assertEquals(Status.INVALID_USERNAME_OR_PASSWORD, exception.getStatus());
     }
 
     @Test

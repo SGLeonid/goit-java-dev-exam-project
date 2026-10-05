@@ -13,7 +13,7 @@ spring:
   jpa:
     open-in-view: true
     hibernate:
-      ddl-auto: update
+      ddl-auto: validate
     properties:
       hibernate:
         default_schema: url_shortener_db
@@ -22,3 +22,5 @@ springwebapp:
   security:
     secret_key: ${SECRET_KEY}
     expiration_time: ${EXPIRATION_TIME}
+  app:
+    base_url: ${APP_BASE_URL}

@@ -12,5 +12,17 @@ public class UrlResponse {
     @Enumerated(EnumType.STRING)
     private final Status error;
     private final String createdBy;
-    private final ShortenedUrl urlInfo;
+    private final UrlDTO url;
+
+    public static UrlResponse of(Status status, String createdBy, ShortenedUrl url) {
+        UrlDTO dto = UrlDTO.builder()
+                .id(url.getId())
+                .shortUrl(url.getShortUrl())
+                .originalUrl(url.getOriginalUrl())
+                .createdAt(url.getCreatedAt())
+                .expiresAt(url.getExpiresAt())
+                .visitTimes(url.getVisitTimes())
+                .build();
+        return new UrlResponse(status, createdBy, dto);
+    }
 }

@@ -26,7 +26,7 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(AuthenticationException.class)
     public ResponseEntity<StatusResponse> handle(AuthenticationException e) {
-        return new ResponseEntity<>(new StatusResponse(e.getStatus()), HttpStatus.FORBIDDEN);
+        return new ResponseEntity<>(new StatusResponse(e.getStatus()), HttpStatus.UNAUTHORIZED);
     }
 
     @ExceptionHandler(RegisterException.class)
@@ -41,7 +41,12 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(UsernameNotFoundException.class)
     public ResponseEntity<StatusResponse> handle(UsernameNotFoundException e) {
-        return new ResponseEntity<>(new StatusResponse(e.getStatus()), HttpStatus.NOT_FOUND);
+        return new ResponseEntity<>(new StatusResponse(e.getStatus()), HttpStatus.UNAUTHORIZED);
+    }
+
+    @ExceptionHandler(UrlGenerationException.class)
+    public ResponseEntity<StatusResponse> handle(UrlGenerationException e) {
+        return new ResponseEntity<>(new StatusResponse(e.getStatus()), HttpStatus.INTERNAL_SERVER_ERROR);
     }
 
     @ExceptionHandler(RedirectUrlExpiredException.class)

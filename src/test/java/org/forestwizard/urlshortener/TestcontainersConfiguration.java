@@ -16,7 +16,7 @@ class TestcontainersConfiguration {
     @ServiceConnection
     PostgreSQLContainer postgresContainer() {
         TimeZone.setDefault(TimeZone.getTimeZone("UTC"));
-        return new PostgreSQLContainer(DockerImageName.parse("postgres:latest"));
+        return new PostgreSQLContainer(DockerImageName.parse("postgres:16"));
     }
 
     @Bean

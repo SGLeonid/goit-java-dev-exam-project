@@ -6,39 +6,55 @@ import org.forestwizard.urlshortener.auth.IUserRepository;
 import org.forestwizard.urlshortener.status.StatusResponse;
 import org.forestwizard.urlshortener.exception.*;
 import org.forestwizard.urlshortener.status.Status;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 
+import java.security.SecureRandom;
 import java.time.Instant;
 import java.time.OffsetDateTime;
 import java.time.ZoneId;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.Optional;
-import java.util.Random;
 
 @Service
 public class UrlService {
-    private static final String SHORT_URL_TEMPLATE = "http://localhost:8080/link/%s";
+    private static final String URL_END_POINT = "/link/%s";
     private static final String HTTP_PREFIX = "http://";
     private static final String HTTPS_PREFIX = "https://";
+    private static final int MAX_URL_GENERATION_ATTEMPTS = 10;
 
     private final IUserRepository userRepository;
     private final IShortenedUrlRepository shortenedUrlRepository;
-    private final Random random;
+    private final String baseUrl;
+    private final SecureRandom secureRandom;
 
-    public UrlService(IUserRepository userRepository, IShortenedUrlRepository shortenedUrlRepository) {
+    public UrlService(
+            @Value("${springwebapp.app.base_url}") String baseUrl,
+            IUserRepository userRepository,
+            IShortenedUrlRepository shortenedUrlRepository
+    ) {
         this.userRepository = userRepository;
         this.shortenedUrlRepository = shortenedUrlRepository;
-        this.random = new Random();
+        this.baseUrl = baseUrl;
+        this.secureRandom = new SecureRandom();
     }
 
-    public UrlListResponse getAllByUsername(String username) throws UsernameNotFoundException {
+    public UrlListResponse getAllByUsername(String username, Boolean showExpired) throws UsernameNotFoundException {
+        List<ShortenedUrl> urls;
+
         if (!userRepository.existsByUsername(username)) {
-            throw new UsernameNotFoundException(Status.SUCH_USER_NOT_EXISTS);
+            throw new UsernameNotFoundException(Status.UNAUTHORIZED_REQUEST);
         }
 
-        List<ShortenedUrl> urls = shortenedUrlRepository.findAllByUsername(username);
-        return new UrlListResponse(Status.OK, username, urls);
+        if (showExpired == null || !showExpired) {
+            urls = shortenedUrlRepository.findAllValidByUsername(username);
+        } else {
+            urls = shortenedUrlRepository.findAllByUsername(username);
+        }
+
+        return UrlListResponse.of(Status.OK, username, urls);
     }
 
     public UrlResponse getByUsernameAndId(
@@ -46,11 +62,11 @@ public class UrlService {
             Long id
     ) throws UsernameNotFoundException, UrlNotFoundException {
         if (!userRepository.existsByUsername(username)) {
-            throw new UsernameNotFoundException(Status.SUCH_USER_NOT_EXISTS);
+            throw new UsernameNotFoundException(Status.UNAUTHORIZED_REQUEST);
         }
 
         Optional<ShortenedUrl> urlOptional = shortenedUrlRepository.findByUsernameAndId(username, id);
-        return urlOptional.map(url -> new UrlResponse(Status.OK, username, url)).orElseThrow(
+        return urlOptional.map(url -> UrlResponse.of(Status.OK, username, url)).orElseThrow(
                 () -> new UrlNotFoundException(Status.SUCH_URL_NOT_EXISTS)
         );
     }
@@ -59,29 +75,26 @@ public class UrlService {
             String username,
             UrlCreateRequest request
     ) throws UsernameNotFoundException, InvalidRequestException {
+        int attempts = MAX_URL_GENERATION_ATTEMPTS;
         validateUrlRequest(request);
-
-        OffsetDateTime createdAt = OffsetDateTime.now(ZoneId.systemDefault()).truncatedTo(ChronoUnit.MICROS);
-        OffsetDateTime expiresAt = createdAt.plusMinutes(request.getExpirationTimeMinutes());
         AuthUser user = userRepository.findByUsername(username).orElseThrow(
-                () -> new UsernameNotFoundException(Status.SUCH_USER_NOT_EXISTS)
+                () -> new UsernameNotFoundException(Status.UNAUTHORIZED_REQUEST)
         );
 
-        String shortUrl;
-        do {
-            shortUrl = String.format(SHORT_URL_TEMPLATE, generateRandomId());
-        } while(shortenedUrlRepository.existsByShortUrl(shortUrl));
+        ShortenedUrl url = null;
+        while (url == null) {
+            try {
+                url = saveWithNewRandomId(user, request);
+                return UrlResponse.of(Status.OK, username, url);
+            } catch (DataIntegrityViolationException _) {
+                if (attempts <= 0) {
+                    throw new UrlGenerationException(Status.URL_GENERATION_FAILED);
+                }
+                attempts--;
+            }
+        }
 
-        ShortenedUrl url = shortenedUrlRepository.save(ShortenedUrl.builder()
-                .user(user)
-                .originalUrl(request.getOriginalUrl())
-                .shortUrl(shortUrl)
-                .createdAt(createdAt)
-                .expiresAt(expiresAt)
-                .visitTimes(0L)
-                .build()
-        );
-        return new UrlResponse(Status.OK, username, url);
+        throw new UrlGenerationException(Status.URL_GENERATION_FAILED);
     }
 
     @Transactional(rollbackOn = Exception.class)
@@ -91,7 +104,7 @@ public class UrlService {
             UrlCreateRequest request
     ) throws UsernameNotFoundException, UrlNotFoundException, InvalidRequestException {
         if (!userRepository.existsByUsername(username)) {
-            throw new UsernameNotFoundException(Status.SUCH_USER_NOT_EXISTS);
+            throw new UsernameNotFoundException(Status.UNAUTHORIZED_REQUEST);
         }
         validateUrlRequest(request);
 
@@ -103,7 +116,7 @@ public class UrlService {
         OffsetDateTime expiresAt = createdAt.plusMinutes(request.getExpirationTimeMinutes());
         shortenedUrlRepository.updateByUsernameAndId(username, id, request.getOriginalUrl(), expiresAt);
         Optional<ShortenedUrl> urlOptional = shortenedUrlRepository.findByUsernameAndId(username, id);
-        return urlOptional.map(shortenedUrl -> new UrlResponse(Status.OK, username, shortenedUrl)).orElseThrow(
+        return urlOptional.map(url -> UrlResponse.of(Status.OK, username, url)).orElseThrow(
                 () -> new UrlNotFoundException(Status.SUCH_URL_NOT_EXISTS)
         );
     }
@@ -113,7 +126,7 @@ public class UrlService {
             Long id
     ) throws UsernameNotFoundException, UrlNotFoundException {
         if (!userRepository.existsByUsername(username)) {
-            throw new UsernameNotFoundException(Status.SUCH_USER_NOT_EXISTS);
+            throw new UsernameNotFoundException(Status.UNAUTHORIZED_REQUEST);
         }
 
         return shortenedUrlRepository.findByUsernameAndId(username, id).map(url -> {
@@ -124,7 +137,7 @@ public class UrlService {
 
     @Transactional(rollbackOn = Exception.class)
     public String getOriginalUrl(String uniqueId) throws RedirectUrlNotFoundException, RedirectUrlExpiredException {
-        String url = String.format(SHORT_URL_TEMPLATE, uniqueId);
+        String url = baseUrl + String.format(URL_END_POINT, uniqueId);
         ShortenedUrl shortenedUrl = shortenedUrlRepository.findByShortUrl(url).orElseThrow(
                 () -> new RedirectUrlNotFoundException("URL not found")
         );
@@ -162,15 +175,31 @@ public class UrlService {
             throw new InvalidRequestException(Status.URL_EXPIRATION_TIME_CANNOT_BE_NULL);
         }
 
-        if (request.getExpirationTimeMinutes() < 0) {
+        if (request.getExpirationTimeMinutes() <= 0) {
             throw new InvalidRequestException(Status.INVALID_URL_EXPIRATION_TIME);
         }
+    }
+
+    @Transactional
+    private ShortenedUrl saveWithNewRandomId(AuthUser user, UrlCreateRequest request) {
+        String shortUrl = baseUrl + String.format(URL_END_POINT, generateRandomId());
+        OffsetDateTime createdAt = OffsetDateTime.now(ZoneId.systemDefault()).truncatedTo(ChronoUnit.MICROS);
+        OffsetDateTime expiresAt = createdAt.plusMinutes(request.getExpirationTimeMinutes());
+        return shortenedUrlRepository.saveAndFlush(ShortenedUrl.builder()
+                .user(user)
+                .originalUrl(request.getOriginalUrl())
+                .shortUrl(shortUrl)
+                .createdAt(createdAt)
+                .expiresAt(expiresAt)
+                .visitTimes(0L)
+                .build()
+        );
     }
 
     private String generateRandomId() {
         StringBuilder builder = new StringBuilder();
         for (int i = 0; i < 8; i++) {
-            builder.append(Integer.toString(random.nextInt(0, Character.MAX_RADIX), Character.MAX_RADIX));
+            builder.append(Integer.toString(secureRandom.nextInt(0, Character.MAX_RADIX), Character.MAX_RADIX));
         }
         return builder.toString();
     }

@@ -77,15 +77,15 @@ class AccountControllerTest {
         UrlResponse response = objectMapper.readValue(json, UrlResponse.class);
         assertEquals(Status.OK, response.getError());
         assertEquals("ForestWizard", response.getCreatedBy());
-        assertNotNull(response.getUrlInfo());
-        assertNotNull(response.getUrlInfo().getId());
-        assertEquals(TEST_EXAMPLE_ORIGINAL_URL, response.getUrlInfo().getOriginalUrl());
-        assertNotNull(response.getUrlInfo().getShortUrl());
-        assertTrue(response.getUrlInfo().getShortUrl().startsWith("http://localhost:8080/"));
-        assertNotNull(response.getUrlInfo().getCreatedAt());
-        assertEquals(response.getUrlInfo().getCreatedAt(), response.getUrlInfo().getExpiresAt().minusMinutes(60));
-        assertEquals(0L, response.getUrlInfo().getVisitTimes());
-        createdUrlId = response.getUrlInfo().getId();
+        assertNotNull(response.getUrl());
+        assertNotNull(response.getUrl().getId());
+        assertEquals(TEST_EXAMPLE_ORIGINAL_URL, response.getUrl().getOriginalUrl());
+        assertNotNull(response.getUrl().getShortUrl());
+        assertTrue(response.getUrl().getShortUrl().startsWith("http://localhost:8080/"));
+        assertNotNull(response.getUrl().getCreatedAt());
+        assertEquals(response.getUrl().getCreatedAt(), response.getUrl().getExpiresAt().minusMinutes(60));
+        assertEquals(0L, response.getUrl().getVisitTimes());
+        createdUrlId = response.getUrl().getId();
     }
 
     @Test
@@ -102,7 +102,7 @@ class AccountControllerTest {
         assertFalse(response.getUrls().isEmpty());
         assertNotNull(response.getUrls().getFirst());
 
-        ShortenedUrl url = response.getUrls().getFirst();
+        UrlDTO url = response.getUrls().getFirst();
         assertNotNull(url.getId());
         assertEquals(TEST_EXAMPLE_ORIGINAL_URL, url.getOriginalUrl());
         assertNotNull(url.getShortUrl());
@@ -122,14 +122,14 @@ class AccountControllerTest {
         UrlResponse response = objectMapper.readValue(json, UrlResponse.class);
         assertEquals(Status.OK, response.getError());
         assertEquals("ForestWizard", response.getCreatedBy());
-        assertNotNull(response.getUrlInfo());
-        assertNotNull(response.getUrlInfo().getId());
-        assertEquals(TEST_EXAMPLE_ORIGINAL_URL, response.getUrlInfo().getOriginalUrl());
-        assertNotNull(response.getUrlInfo().getShortUrl());
-        assertTrue(response.getUrlInfo().getShortUrl().startsWith("http://localhost:8080/"));
-        assertEquals(TEST_EXAMPLE_CREATE_DATE, response.getUrlInfo().getCreatedAt());
-        assertEquals(response.getUrlInfo().getCreatedAt(), response.getUrlInfo().getExpiresAt().minusMinutes(60));
-        assertEquals(0L, response.getUrlInfo().getVisitTimes());
+        assertNotNull(response.getUrl());
+        assertNotNull(response.getUrl().getId());
+        assertEquals(TEST_EXAMPLE_ORIGINAL_URL, response.getUrl().getOriginalUrl());
+        assertNotNull(response.getUrl().getShortUrl());
+        assertTrue(response.getUrl().getShortUrl().startsWith("http://localhost:8080/"));
+        assertEquals(TEST_EXAMPLE_CREATE_DATE, response.getUrl().getCreatedAt());
+        assertEquals(response.getUrl().getCreatedAt(), response.getUrl().getExpiresAt().minusMinutes(60));
+        assertEquals(0L, response.getUrl().getVisitTimes());
     }
 
     @Test
@@ -144,14 +144,14 @@ class AccountControllerTest {
         UrlResponse response = objectMapper.readValue(json, UrlResponse.class);
         assertEquals(Status.OK, response.getError());
         assertEquals("ForestWizard", response.getCreatedBy());
-        assertNotNull(response.getUrlInfo());
-        assertNotNull(response.getUrlInfo().getId());
-        assertEquals(TEST_EXAMPLE_NEW_ORIGINAL_URL, response.getUrlInfo().getOriginalUrl());
-        assertNotNull(response.getUrlInfo().getShortUrl());
-        assertTrue(response.getUrlInfo().getShortUrl().startsWith("http://localhost:8080/"));
-        assertEquals(TEST_EXAMPLE_CREATE_DATE, response.getUrlInfo().getCreatedAt());
-        assertEquals(response.getUrlInfo().getCreatedAt(), response.getUrlInfo().getExpiresAt().minusMinutes(240));
-        assertEquals(0L, response.getUrlInfo().getVisitTimes());
+        assertNotNull(response.getUrl());
+        assertNotNull(response.getUrl().getId());
+        assertEquals(TEST_EXAMPLE_NEW_ORIGINAL_URL, response.getUrl().getOriginalUrl());
+        assertNotNull(response.getUrl().getShortUrl());
+        assertTrue(response.getUrl().getShortUrl().startsWith("http://localhost:8080/"));
+        assertEquals(TEST_EXAMPLE_CREATE_DATE, response.getUrl().getCreatedAt());
+        assertEquals(response.getUrl().getCreatedAt(), response.getUrl().getExpiresAt().minusMinutes(240));
+        assertEquals(0L, response.getUrl().getVisitTimes());
     }
 
     @Test

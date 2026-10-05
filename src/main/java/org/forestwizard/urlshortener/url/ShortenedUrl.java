@@ -15,7 +15,7 @@ import java.time.OffsetDateTime;
 @AllArgsConstructor
 @NoArgsConstructor
 @Entity
-@Table(name = "shortened_url")
+@Table(name = "shortened_url", uniqueConstraints = { @UniqueConstraint(columnNames = { "short_url" }) })
 public class ShortenedUrl {
     @Id
     @Column(name = "id")
