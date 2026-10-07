@@ -12,7 +12,7 @@ URL Shortener REST API
 ### Account URL service end points (require authentication)
 
 * `POST /api/v1/account/links`
-* `GET /api/v1/account/links&show_expired=false`
+* `GET /api/v1/account/links?show_expired=false`
 * `GET /api/v1/account/links/{id}`
 * `PATCH /api/v1/account/links/{id}`
 * `DELETE /api/v1/account/links/{id}`

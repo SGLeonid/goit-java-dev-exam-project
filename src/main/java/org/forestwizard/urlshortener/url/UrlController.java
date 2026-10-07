@@ -16,11 +16,11 @@ public class UrlController {
     private static final String TEMPLATE_NOT_FOUND = "not_found";
     private static final String TEMPLATE_EXPIRED = "expired";
 
-    private final UrlService urlService;
+    private final UrlTransactionService urlTransactionService;
 
     @GetMapping("/link/{uniqueId}")
     public RedirectView getUrl(@PathVariable("uniqueId") String uniqueId) {
-        String url = urlService.getOriginalUrl(uniqueId);
+        String url = urlTransactionService.getOriginalUrl(uniqueId);
         return new RedirectView(url, false);
     }
 

@@ -2,20 +2,21 @@ package org.forestwizard.urlshortener.url;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Data;
-import lombok.NoArgsConstructor;
+import lombok.*;
 import org.forestwizard.urlshortener.auth.AuthUser;
 
 import java.time.OffsetDateTime;
 
-@Data
+@Getter
+@Setter
 @Builder
 @AllArgsConstructor
 @NoArgsConstructor
 @Entity
-@Table(name = "shortened_url", uniqueConstraints = { @UniqueConstraint(columnNames = { "short_url" }) })
+@Table(name = "shortened_url", uniqueConstraints = { @UniqueConstraint(
+        name = "shortened_url_short_code_unique",
+        columnNames = { "short_code" }
+)})
 public class ShortenedUrl {
     @Id
     @Column(name = "id")
@@ -30,8 +31,8 @@ public class ShortenedUrl {
     @Column(name = "original_url")
     private String originalUrl;
 
-    @Column(name = "short_url")
-    private String shortUrl;
+    @Column(name = "short_code")
+    private String shortCode;
 
     @Column(name = "created_at")
     private OffsetDateTime createdAt;

@@ -1,8 +1,8 @@
 package org.forestwizard.urlshortener.security;
 
 import io.jsonwebtoken.ExpiredJwtException;
+import io.jsonwebtoken.JwtException;
 import io.jsonwebtoken.MalformedJwtException;
-import io.jsonwebtoken.security.SignatureException;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -70,7 +70,7 @@ public class JwtRequestFilter extends BasicAuthenticationFilter {
         } catch (MalformedJwtException _) {
             setResponse(response, Status.SESSION_MALFORMED);
             return;
-        } catch (SignatureException _) {
+        } catch (JwtException _) {
             setResponse(response, Status.SESSION_INTERNAL_ERROR);
             return;
         }

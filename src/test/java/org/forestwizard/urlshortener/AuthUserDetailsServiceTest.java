@@ -21,7 +21,6 @@ import java.util.Set;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
 class AuthUserDetailsServiceTest {
@@ -67,15 +66,10 @@ class AuthUserDetailsServiceTest {
     void testSavesUser() {
         AuthUser user = new AuthUser("ForestWizard", "PassWord1234", Role.USER);
 
-        when(userRepository.save(user)).thenReturn(user);
-        AuthUser savedUser = authUserDetailsService.saveUser(user);
-
-        assertNotNull(savedUser);
-        assertEquals("ForestWizard", savedUser.getUsername());
-        assertEquals("PassWord1234", savedUser.getPassword());
-        assertEquals(Role.USER, savedUser.getRole());
-
-        verify(userRepository).save(user);
+        given(userRepository.insert("ForestWizard", "PassWord1234", Role.USER.name())).willReturn(1);
+        int insertedRows = authUserDetailsService.saveUser(user);
+        assertEquals(1, insertedRows);
+        verify(userRepository).insert("ForestWizard", "PassWord1234", Role.USER.name());
     }
 
     @Test

@@ -6,7 +6,8 @@ import org.forestwizard.urlshortener.exception.InvalidRequestException;
 import org.forestwizard.urlshortener.exception.RegisterException;
 import org.forestwizard.urlshortener.security.JwtService;
 import org.forestwizard.urlshortener.status.Status;
-import org.springframework.security.core.userdetails.UserDetails;
+import org.hibernate.exception.ConstraintViolationException;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -14,6 +15,7 @@ import org.springframework.stereotype.Service;
 @Service
 @RequiredArgsConstructor
 public class AuthService implements IAuthService {
+    private static final String USERNAME_CONSTRAINT_NAME = "auth_user_username_unique";
     private static final int MIN_PASSWORD_LENGTH = 8;
     private static final int MAX_USERNAME_LENGTH = 255;
     private static final int MAX_PASSWORD_LENGTH = 255;
@@ -24,29 +26,39 @@ public class AuthService implements IAuthService {
 
     @Override
     public AuthResponse register(AuthRequest request) throws InvalidRequestException, RegisterException {
+        AuthUser savedUser;
         validateAuthRequest(request);
-        if (userDetailsService.hasUser(request.getUsername())) {
-            throw new RegisterException(Status.SUCH_USER_ALREADY_EXISTS);
+
+        try {
+            userDetailsService.saveUser(AuthUser.builder()
+                    .username(request.getUsername())
+                    .passwordHash(passwordEncoder.encode(request.getPassword()))
+                    .role(Role.USER)
+                    .build()
+            );
+        } catch (DataIntegrityViolationException e) {
+            if (isCauseConstraintViolation(e)) {
+                throw new RegisterException(Status.SUCH_USER_ALREADY_EXISTS, e);
+            }
+            throw new RegisterException(Status.REGISTER_INTERNAL_ERROR, e);
         }
 
-        userDetailsService.saveUser(AuthUser.builder()
-                .username(request.getUsername())
-                .passwordHash(passwordEncoder.encode(request.getPassword()))
-                .role(Role.USER)
-                .build()
-        );
-
-        String jwt = jwtService.generateToken(request.getUsername());
+        try {
+            savedUser = userDetailsService.findUserByUsername(request.getUsername());
+        } catch (UsernameNotFoundException e) {
+            throw new RegisterException(Status.REGISTER_INTERNAL_ERROR, e);
+        }
+        String jwt = jwtService.generateToken(savedUser.getUsername());
         return new AuthResponse(Status.OK, jwt);
     }
 
     @Override
     public AuthResponse login(AuthRequest request) throws InvalidRequestException, AuthenticationException {
+        AuthUser user;
         validateAuthRequest(request);
-        UserDetails user;
 
         try {
-            user = userDetailsService.loadUserByUsername(request.getUsername());
+            user = userDetailsService.findUserByUsername(request.getUsername());
         } catch (UsernameNotFoundException e) {
             throw new AuthenticationException(Status.INVALID_USERNAME_OR_PASSWORD, e);
         }
@@ -86,5 +98,17 @@ public class AuthService implements IAuthService {
         )) {
             throw new InvalidRequestException(Status.PASSWORD_REQUIREMENTS_UNSATISFIED);
         }
+    }
+
+    private boolean isCauseConstraintViolation(Throwable exception) {
+        Throwable cause = exception.getCause();
+        while (cause != null) {
+            if (cause instanceof ConstraintViolationException constraintException) {
+                String constraintName = constraintException.getConstraintName();
+                return constraintName != null && constraintName.equalsIgnoreCase(USERNAME_CONSTRAINT_NAME);
+            }
+            cause = cause.getCause();
+        }
+        return false;
     }
 }

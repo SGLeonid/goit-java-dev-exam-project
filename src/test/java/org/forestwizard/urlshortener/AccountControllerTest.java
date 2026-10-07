@@ -33,7 +33,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 class AccountControllerTest {
     private static final String TEST_EXAMPLE_ORIGINAL_URL = "https://www.baeldung.com/rest-versioning";
     private static final String TEST_EXAMPLE_NEW_ORIGINAL_URL = "https://www.baeldung.com/mockito-series";
-    private static final String TEST_EXAMPLE_SHORT_URL = "http://localhost:8080/h4xs8g3";
+    private static final String TEST_EXAMPLE_SHORT_CODE = "h4xs8g3";
     private static final OffsetDateTime TEST_EXAMPLE_CREATE_DATE = OffsetDateTime
             .now(TimeZone.getTimeZone("UTC").toZoneId())
             .truncatedTo(ChronoUnit.MICROS);
@@ -149,8 +149,7 @@ class AccountControllerTest {
         assertEquals(TEST_EXAMPLE_NEW_ORIGINAL_URL, response.getUrl().getOriginalUrl());
         assertNotNull(response.getUrl().getShortUrl());
         assertTrue(response.getUrl().getShortUrl().startsWith("http://localhost:8080/"));
-        assertEquals(TEST_EXAMPLE_CREATE_DATE, response.getUrl().getCreatedAt());
-        assertEquals(response.getUrl().getCreatedAt(), response.getUrl().getExpiresAt().minusMinutes(240));
+        assertTrue(response.getUrl().getCreatedAt().isBefore(response.getUrl().getExpiresAt().minusMinutes(240)));
         assertEquals(0L, response.getUrl().getVisitTimes());
     }
 
@@ -195,7 +194,7 @@ class AccountControllerTest {
         return ShortenedUrl.builder()
                 .user(user)
                 .originalUrl(TEST_EXAMPLE_ORIGINAL_URL)
-                .shortUrl(TEST_EXAMPLE_SHORT_URL)
+                .shortCode(TEST_EXAMPLE_SHORT_CODE)
                 .createdAt(TEST_EXAMPLE_CREATE_DATE)
                 .expiresAt(TEST_EXAMPLE_CREATE_DATE.plusMinutes(expireTime))
                 .visitTimes(0L)

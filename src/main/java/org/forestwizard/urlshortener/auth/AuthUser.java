@@ -1,10 +1,7 @@
 package org.forestwizard.urlshortener.auth;
 
 import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Data;
-import lombok.NoArgsConstructor;
+import lombok.*;
 import org.jspecify.annotations.NullMarked;
 import org.jspecify.annotations.Nullable;
 import org.springframework.security.core.GrantedAuthority;
@@ -14,12 +11,16 @@ import org.springframework.security.core.userdetails.UserDetails;
 import java.util.Collection;
 import java.util.List;
 
-@Data
+@Getter
+@Setter
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
 @Entity
-@Table(name = "auth_user")
+@Table(name = "auth_user", uniqueConstraints = { @UniqueConstraint(
+        name = "auth_user_username_unique",
+        columnNames = { "username" }
+)})
 public class AuthUser implements UserDetails {
     @Id
     @Column(name = "username", nullable = false)

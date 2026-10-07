@@ -1,7 +1,9 @@
 package org.forestwizard.urlshortener.auth;
 
+import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.jspecify.annotations.NullMarked;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.User;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -16,6 +18,12 @@ import java.util.Optional;
 @RequiredArgsConstructor
 public class AuthUserDetailsService implements UserDetailsService {
     private final IUserRepository userRepository;
+
+    public AuthUser findUserByUsername(String username) {
+        return userRepository.findByUsername(username).orElseThrow(
+                () -> new UsernameNotFoundException("Such user not found: " + username)
+        );
+    }
 
     @Override
     @NullMarked
@@ -33,7 +41,8 @@ public class AuthUserDetailsService implements UserDetailsService {
         return userRepository.existsByUsername(username);
     }
 
-    public AuthUser saveUser(AuthUser user) {
-        return userRepository.save(user);
+    @Transactional(rollbackOn = Exception.class)
+    public int saveUser(AuthUser user) throws DataIntegrityViolationException {
+        return userRepository.insert(user.getUsername(), user.getPasswordHash(), user.getRole().name());
     }
 }

@@ -1,44 +1,41 @@
 package org.forestwizard.urlshortener.url;
 
-import jakarta.transaction.Transactional;
 import org.forestwizard.urlshortener.auth.AuthUser;
 import org.forestwizard.urlshortener.auth.IUserRepository;
 import org.forestwizard.urlshortener.status.StatusResponse;
 import org.forestwizard.urlshortener.exception.*;
 import org.forestwizard.urlshortener.status.Status;
+import org.hibernate.exception.ConstraintViolationException;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 
-import java.security.SecureRandom;
-import java.time.Instant;
-import java.time.OffsetDateTime;
-import java.time.ZoneId;
-import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.Optional;
 
 @Service
 public class UrlService {
-    private static final String URL_END_POINT = "/link/%s";
     private static final String HTTP_PREFIX = "http://";
     private static final String HTTPS_PREFIX = "https://";
+    private static final String SHORT_CODE_CONSTRAINT_NAME = "shortened_url_short_code_unique";
+    private static final String SHORT_URL_MAPPING = "/link/%s";
     private static final int MAX_URL_GENERATION_ATTEMPTS = 10;
 
     private final IUserRepository userRepository;
     private final IShortenedUrlRepository shortenedUrlRepository;
+    private final UrlTransactionService urlTransactionService;
     private final String baseUrl;
-    private final SecureRandom secureRandom;
 
     public UrlService(
             @Value("${springwebapp.app.base_url}") String baseUrl,
             IUserRepository userRepository,
-            IShortenedUrlRepository shortenedUrlRepository
+            IShortenedUrlRepository shortenedUrlRepository,
+            UrlTransactionService urlTransactionService
     ) {
         this.userRepository = userRepository;
         this.shortenedUrlRepository = shortenedUrlRepository;
+        this.urlTransactionService = urlTransactionService;
         this.baseUrl = baseUrl;
-        this.secureRandom = new SecureRandom();
     }
 
     public UrlListResponse getAllByUsername(String username, Boolean showExpired) throws UsernameNotFoundException {
@@ -54,7 +51,7 @@ public class UrlService {
             urls = shortenedUrlRepository.findAllByUsername(username);
         }
 
-        return UrlListResponse.of(Status.OK, username, urls);
+        return UrlListResponse.of(Status.OK, username, baseUrl + SHORT_URL_MAPPING, urls);
     }
 
     public UrlResponse getByUsernameAndId(
@@ -66,9 +63,9 @@ public class UrlService {
         }
 
         Optional<ShortenedUrl> urlOptional = shortenedUrlRepository.findByUsernameAndId(username, id);
-        return urlOptional.map(url -> UrlResponse.of(Status.OK, username, url)).orElseThrow(
-                () -> new UrlNotFoundException(Status.SUCH_URL_NOT_EXISTS)
-        );
+        return urlOptional.map(
+                url -> UrlResponse.of(Status.OK, username, baseUrl + SHORT_URL_MAPPING, url)
+        ).orElseThrow(() -> new UrlNotFoundException(Status.SUCH_URL_NOT_EXISTS));
     }
 
     public UrlResponse create(
@@ -81,23 +78,22 @@ public class UrlService {
                 () -> new UsernameNotFoundException(Status.UNAUTHORIZED_REQUEST)
         );
 
-        ShortenedUrl url = null;
-        while (url == null) {
+        while (attempts > 0) {
             try {
-                url = saveWithNewRandomId(user, request);
-                return UrlResponse.of(Status.OK, username, url);
-            } catch (DataIntegrityViolationException _) {
-                if (attempts <= 0) {
+                ShortenedUrl url = urlTransactionService.saveWithNewRandomId(user, request);
+                return UrlResponse.of(Status.OK, username, baseUrl + SHORT_URL_MAPPING, url);
+            } catch (DataIntegrityViolationException e) {
+                if (isCauseUniqueConstraintViolation(e)) {
+                    attempts--;
+                } else {
                     throw new UrlGenerationException(Status.URL_GENERATION_FAILED);
                 }
-                attempts--;
             }
         }
 
         throw new UrlGenerationException(Status.URL_GENERATION_FAILED);
     }
 
-    @Transactional(rollbackOn = Exception.class)
     public UrlResponse update(
             String username,
             Long id,
@@ -108,17 +104,15 @@ public class UrlService {
         }
         validateUrlRequest(request);
 
-        Instant createdAtInstant = shortenedUrlRepository.findCreatedAtByUsernameAndId(username, id).orElseThrow(
-                () -> new UrlNotFoundException(Status.SUCH_URL_NOT_EXISTS)
-        );
+        int updates = urlTransactionService.update(username, id, request);
+        if (updates == 0) {
+            throw new UrlNotFoundException(Status.SUCH_URL_NOT_EXISTS);
+        }
 
-        OffsetDateTime createdAt = OffsetDateTime.ofInstant(createdAtInstant, ZoneId.of("UTC"));
-        OffsetDateTime expiresAt = createdAt.plusMinutes(request.getExpirationTimeMinutes());
-        shortenedUrlRepository.updateByUsernameAndId(username, id, request.getOriginalUrl(), expiresAt);
         Optional<ShortenedUrl> urlOptional = shortenedUrlRepository.findByUsernameAndId(username, id);
-        return urlOptional.map(url -> UrlResponse.of(Status.OK, username, url)).orElseThrow(
-                () -> new UrlNotFoundException(Status.SUCH_URL_NOT_EXISTS)
-        );
+        return urlOptional.map(
+                url -> UrlResponse.of(Status.OK, username, baseUrl + SHORT_URL_MAPPING, url)
+        ).orElseThrow(() -> new UrlNotFoundException(Status.SUCH_URL_NOT_EXISTS));
     }
 
     public StatusResponse deleteByUsernameAndId(
@@ -133,24 +127,6 @@ public class UrlService {
             shortenedUrlRepository.delete(url);
             return new StatusResponse(Status.OK);
         }).orElseThrow(() -> new UrlNotFoundException(Status.SUCH_URL_NOT_EXISTS));
-    }
-
-    @Transactional(rollbackOn = Exception.class)
-    public String getOriginalUrl(String uniqueId) throws RedirectUrlNotFoundException, RedirectUrlExpiredException {
-        String url = baseUrl + String.format(URL_END_POINT, uniqueId);
-        ShortenedUrl shortenedUrl = shortenedUrlRepository.findByShortUrl(url).orElseThrow(
-                () -> new RedirectUrlNotFoundException("URL not found")
-        );
-
-        if (!OffsetDateTime.now(ZoneId.systemDefault())
-                .truncatedTo(ChronoUnit.MICROS)
-                .isBefore(shortenedUrl.getExpiresAt())
-        ) {
-            throw new RedirectUrlExpiredException("URL is expired");
-        }
-
-        shortenedUrlRepository.incrementUrlVisitTimesById(shortenedUrl.getId());
-        return shortenedUrl.getOriginalUrl();
     }
 
     public void validateUrlRequest(UrlCreateRequest request) throws InvalidRequestException {
@@ -180,27 +156,15 @@ public class UrlService {
         }
     }
 
-    @Transactional
-    private ShortenedUrl saveWithNewRandomId(AuthUser user, UrlCreateRequest request) {
-        String shortUrl = baseUrl + String.format(URL_END_POINT, generateRandomId());
-        OffsetDateTime createdAt = OffsetDateTime.now(ZoneId.systemDefault()).truncatedTo(ChronoUnit.MICROS);
-        OffsetDateTime expiresAt = createdAt.plusMinutes(request.getExpirationTimeMinutes());
-        return shortenedUrlRepository.saveAndFlush(ShortenedUrl.builder()
-                .user(user)
-                .originalUrl(request.getOriginalUrl())
-                .shortUrl(shortUrl)
-                .createdAt(createdAt)
-                .expiresAt(expiresAt)
-                .visitTimes(0L)
-                .build()
-        );
-    }
-
-    private String generateRandomId() {
-        StringBuilder builder = new StringBuilder();
-        for (int i = 0; i < 8; i++) {
-            builder.append(Integer.toString(secureRandom.nextInt(0, Character.MAX_RADIX), Character.MAX_RADIX));
+    private boolean isCauseUniqueConstraintViolation(Throwable exception) {
+        Throwable cause = exception.getCause();
+        while (cause != null) {
+            if (cause instanceof ConstraintViolationException constraintException) {
+                String constraint = constraintException.getConstraintName();
+                return constraint != null && constraint.equalsIgnoreCase(SHORT_CODE_CONSTRAINT_NAME);
+            }
+            cause = cause.getCause();
         }
-        return builder.toString();
+        return false;
     }
 }

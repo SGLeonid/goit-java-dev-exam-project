@@ -66,7 +66,7 @@ public class JwtService implements IJwtService {
         try {
             return extractExpiration(token).before(new Date());
         } catch (ExpiredJwtException _) {
-            return false;
+            return true;
         }
     }
 

@@ -28,7 +28,9 @@ class UserRepositoryTest {
     void testSavesUser() {
         AuthUser user = new AuthUser("ForestWizard", "PassWord1234", Role.USER);
         AuthUser savedUser = assertDoesNotThrow(() -> userRepository.save(user));
-        assertEquals(savedUser, user);
+        assertEquals(user.getUsername(), savedUser.getUsername());
+        assertEquals(user.getPassword(), savedUser.getPassword());
+        assertEquals(Role.USER, savedUser.getRole());
         assertEquals(1, userRepository.count());
     }
 
@@ -48,6 +50,8 @@ class UserRepositoryTest {
         Optional<AuthUser> userOptional = assertDoesNotThrow(() -> userRepository.findByUsername("ForestWizard"));
         assertTrue(userOptional.isPresent());
         AuthUser savedUser = userOptional.get();
-        assertEquals(savedUser, user);
+        assertEquals(user.getUsername(), savedUser.getUsername());
+        assertEquals(user.getPassword(), savedUser.getPassword());
+        assertEquals(Role.USER, savedUser.getRole());
     }
 }

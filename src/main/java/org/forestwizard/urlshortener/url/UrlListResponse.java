@@ -16,10 +16,10 @@ public class UrlListResponse {
     private final String createdBy;
     private final List<UrlDTO> urls;
 
-    public static UrlListResponse of(Status error, String createdBy, List<ShortenedUrl> urls) {
+    public static UrlListResponse of(Status error, String createdBy, String urlFormat, List<ShortenedUrl> urls) {
         List<UrlDTO> urlList = urls.stream().map(url -> UrlDTO.builder()
                 .id(url.getId())
-                .shortUrl(url.getShortUrl())
+                .shortUrl(String.format(urlFormat, url.getShortCode()))
                 .originalUrl(url.getOriginalUrl())
                 .createdAt(url.getCreatedAt())
                 .expiresAt(url.getExpiresAt())

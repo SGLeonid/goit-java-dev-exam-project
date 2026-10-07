@@ -7,8 +7,8 @@ import org.forestwizard.urlshortener.status.Status;
 public class RegisterException extends RuntimeException {
     private final Status status;
 
-    public RegisterException(Status status) {
-        super();
+    public RegisterException(Status status, Throwable cause) {
+        super(cause);
         this.status = status;
     }
 }

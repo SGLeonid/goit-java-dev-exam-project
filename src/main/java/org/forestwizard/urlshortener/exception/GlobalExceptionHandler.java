@@ -31,6 +31,13 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(RegisterException.class)
     public ResponseEntity<StatusResponse> handle(RegisterException e) {
+        if (e.getStatus() == Status.REGISTER_INTERNAL_ERROR) {
+            return new ResponseEntity<>(new StatusResponse(e.getStatus()), HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+        if (e.getStatus() == Status.SUCH_USER_ALREADY_EXISTS) {
+            return new ResponseEntity<>(new StatusResponse(e.getStatus()), HttpStatus.CONFLICT);
+        }
+
         return new ResponseEntity<>(new StatusResponse(e.getStatus()), HttpStatus.FORBIDDEN);
     }
 

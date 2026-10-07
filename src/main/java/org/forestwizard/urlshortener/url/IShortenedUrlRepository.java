@@ -5,7 +5,6 @@ import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
-import java.time.Instant;
 import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.Optional;
@@ -14,7 +13,10 @@ public interface IShortenedUrlRepository extends JpaRepository<ShortenedUrl, Lon
     @Query(value = "SELECT * FROM url_shortener_db.shortened_url WHERE username = :username", nativeQuery = true)
     List<ShortenedUrl> findAllByUsername(@Param("username") String username);
 
-    @Query(value = "SELECT * FROM url_shortener_db.shortened_url WHERE username = :username AND expires_at > CURRENT_TIMESTAMP", nativeQuery = true)
+    @Query(
+            value = "SELECT * FROM url_shortener_db.shortened_url " +
+                    "WHERE username = :username AND expires_at > CURRENT_TIMESTAMP",
+            nativeQuery = true)
     List<ShortenedUrl> findAllValidByUsername(@Param("username") String username);
 
     @Query(
@@ -22,12 +24,6 @@ public interface IShortenedUrlRepository extends JpaRepository<ShortenedUrl, Lon
             nativeQuery = true
     )
     Optional<ShortenedUrl> findByUsernameAndId(@Param("username") String username, @Param("id") Long id);
-
-    @Query(
-            value = "SELECT created_at FROM url_shortener_db.shortened_url WHERE username = :username AND id = :id",
-            nativeQuery = true
-    )
-    Optional<Instant> findCreatedAtByUsernameAndId(@Param("username") String username, @Param("id") Long id);
 
     @Modifying
     @Query(
@@ -49,7 +45,5 @@ public interface IShortenedUrlRepository extends JpaRepository<ShortenedUrl, Lon
     )
     int incrementUrlVisitTimesById(@Param("id") Long id);
 
-    Optional<ShortenedUrl> findByShortUrl(String shortUrl);
-
-    boolean existsByShortUrl(String shortUrl);
+    Optional<ShortenedUrl> findByShortCode(String shortCode);
 }

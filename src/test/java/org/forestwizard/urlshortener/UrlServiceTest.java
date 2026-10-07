@@ -27,6 +27,7 @@ import static org.mockito.Mockito.verify;
 @ExtendWith(MockitoExtension.class)
 class UrlServiceTest {
     private static final String TEST_EXAMPLE_ORIGINAL_URL = "https://www.baeldung.com/rest-versioning";
+    private static final String TEST_EXAMPLE_SHORT_CODE = "h4xs8g3";
     private static final String TEST_EXAMPLE_SHORT_URL = "http://localhost:8080/link/h4xs8g3";
     private static final String TEST_EXAMPLE_SHORT_URL_PATH_ID = "h4xs8g3";
     private static final String TEST_EXAMPLE_NEW_ORIGINAL_URL = "https://www.baeldung.com/mockito-series";
@@ -39,11 +40,18 @@ class UrlServiceTest {
     @Mock
     private IShortenedUrlRepository shortenedUrlRepository;
     @InjectMocks
+    private UrlTransactionService urlTransactionService;
+    @InjectMocks
     private UrlService urlService;
 
     @BeforeEach
     void setUp() {
-        urlService = new UrlService("http://localhost:8080", userRepository, shortenedUrlRepository);
+        urlService = new UrlService(
+                "http://localhost:8080",
+                userRepository,
+                shortenedUrlRepository,
+                urlTransactionService
+        );
     }
 
     @Test
@@ -53,7 +61,7 @@ class UrlServiceTest {
                 .id(1L)
                 .user(user)
                 .originalUrl(TEST_EXAMPLE_ORIGINAL_URL)
-                .shortUrl(TEST_EXAMPLE_SHORT_URL)
+                .shortCode(TEST_EXAMPLE_SHORT_CODE)
                 .createdAt(TEST_EXAMPLE_CREATE_DATE)
                 .expiresAt(TEST_EXAMPLE_CREATE_DATE.plusMinutes(60))
                 .build();
@@ -91,7 +99,12 @@ class UrlServiceTest {
     void testGetByUsernameAndId() {
         AuthUser user = new AuthUser("ForestWizard", "PassWord1234", Role.USER);
         ShortenedUrl shortenedUrl = ShortenedUrl.builder().id(1L).user(user).build();
-        UrlResponse expectedResponse = UrlResponse.of(Status.OK, "ForestWizard", shortenedUrl);
+        UrlResponse expectedResponse = UrlResponse.of(
+                Status.OK,
+                "ForestWizard",
+                "http://localhost:8080/link/%s",
+                shortenedUrl
+        );
 
         given(userRepository.existsByUsername("ForestWizard")).willReturn(true);
         given(shortenedUrlRepository.findByUsernameAndId("ForestWizard", 1L)).willReturn(Optional.of(shortenedUrl));
@@ -130,7 +143,12 @@ class UrlServiceTest {
     void testCreate() {
         AuthUser user = new AuthUser("ForestWizard", "PassWord1234", Role.USER);
         ShortenedUrl shortenedUrl = ShortenedUrl.builder().id(1L).user(user).build();
-        UrlResponse expectedResponse = UrlResponse.of(Status.OK, "ForestWizard", shortenedUrl);
+        UrlResponse expectedResponse = UrlResponse.of(
+                Status.OK,
+                "ForestWizard",
+                "http://localhost:8080/link/%s",
+                shortenedUrl
+        );
 
         given(userRepository.findByUsername("ForestWizard")).willReturn(Optional.of(user));
         given(shortenedUrlRepository.saveAndFlush(any(ShortenedUrl.class))).willReturn(shortenedUrl);
@@ -160,21 +178,23 @@ class UrlServiceTest {
                 .id(1L)
                 .user(new AuthUser("ForestWizard", "PassWord1234", Role.USER))
                 .originalUrl(TEST_EXAMPLE_NEW_ORIGINAL_URL)
-                .shortUrl(TEST_EXAMPLE_SHORT_URL)
+                .shortCode(TEST_EXAMPLE_SHORT_CODE)
                 .createdAt(TEST_EXAMPLE_CREATE_DATE)
                 .expiresAt(TEST_EXAMPLE_CREATE_DATE.plusMinutes(60))
                 .build();
-        UrlResponse expectedResponse = UrlResponse.of(Status.OK, "ForestWizard", expectedUrl);
+        UrlResponse expectedResponse = UrlResponse.of(
+                Status.OK,
+                "ForestWizard",
+                "http://localhost:8080/link/" + TEST_EXAMPLE_SHORT_CODE,
+                expectedUrl
+        );
 
         given(userRepository.existsByUsername("ForestWizard")).willReturn(true);
-        given(shortenedUrlRepository.findCreatedAtByUsernameAndId("ForestWizard", 1L)).willReturn(
-                Optional.of(TEST_EXAMPLE_CREATE_DATE.toInstant())
-        );
         given(shortenedUrlRepository.updateByUsernameAndId(
-                "ForestWizard",
-                1L,
-                TEST_EXAMPLE_NEW_ORIGINAL_URL,
-                TEST_EXAMPLE_CREATE_DATE.plusMinutes(60))
+                any(String.class),
+                any(Long.class),
+                any(String.class),
+                any(OffsetDateTime.class))
         ).willReturn(1);
         given(shortenedUrlRepository.findByUsernameAndId("ForestWizard", 1L)).willReturn(Optional.of(expectedUrl));
 
@@ -184,13 +204,13 @@ class UrlServiceTest {
         assertEquals(expectedResponse, response);
 
         verify(userRepository).existsByUsername("ForestWizard");
-        verify(shortenedUrlRepository).findCreatedAtByUsernameAndId("ForestWizard", 1L);
         verify(shortenedUrlRepository).updateByUsernameAndId(
-                "ForestWizard",
-                1L,
-                TEST_EXAMPLE_NEW_ORIGINAL_URL,
-                TEST_EXAMPLE_CREATE_DATE.plusMinutes(60)
+                any(String.class),
+                any(Long.class),
+                any(String.class),
+                any(OffsetDateTime.class)
         );
+        verify(shortenedUrlRepository).findByUsernameAndId("ForestWizard", 1L);
     }
 
     @Test
@@ -206,13 +226,11 @@ class UrlServiceTest {
     @Test
     void testUpdateThrowsUrlNotFoundException() {
         given(userRepository.existsByUsername("ForestWizard")).willReturn(true);
-        given(shortenedUrlRepository.findCreatedAtByUsernameAndId("ForestWizard", 1L)).willReturn(Optional.empty());
         UrlNotFoundException exception = assertThrows(UrlNotFoundException.class,
                 () -> urlService.update("ForestWizard", 1L, new UrlCreateRequest(TEST_EXAMPLE_NEW_ORIGINAL_URL, 60))
         );
         assertEquals(Status.SUCH_URL_NOT_EXISTS, exception.getStatus());
         verify(userRepository).existsByUsername("ForestWizard");
-        verify(shortenedUrlRepository).findCreatedAtByUsernameAndId("ForestWizard", 1L);
     }
 
 
@@ -221,7 +239,7 @@ class UrlServiceTest {
         AuthUser user = new AuthUser("ForestWizard", "PassWord1234", Role.USER);
         ShortenedUrl shortenedUrl = ShortenedUrl.builder().id(1L)
                 .user(user)
-                .shortUrl(TEST_EXAMPLE_SHORT_URL)
+                .shortCode(TEST_EXAMPLE_SHORT_CODE)
                 .originalUrl(TEST_EXAMPLE_ORIGINAL_URL)
                 .createdAt(TEST_EXAMPLE_CREATE_DATE)
                 .expiresAt(TEST_EXAMPLE_CREATE_DATE.plusMinutes(60))
@@ -264,40 +282,40 @@ class UrlServiceTest {
                 .id(1L)
                 .user(user)
                 .originalUrl(TEST_EXAMPLE_ORIGINAL_URL)
-                .shortUrl(TEST_EXAMPLE_SHORT_URL)
+                .shortCode(TEST_EXAMPLE_SHORT_CODE)
                 .createdAt(TEST_EXAMPLE_CREATE_DATE)
                 .expiresAt(TEST_EXAMPLE_CREATE_DATE.plusMinutes(60))
                 .build();
-        given(shortenedUrlRepository.findByShortUrl(TEST_EXAMPLE_SHORT_URL)).willReturn(Optional.of(shortenedUrl));
-        String url = assertDoesNotThrow(() -> urlService.getOriginalUrl(TEST_EXAMPLE_SHORT_URL_PATH_ID));
+        given(shortenedUrlRepository.findByShortCode(TEST_EXAMPLE_SHORT_CODE)).willReturn(Optional.of(shortenedUrl));
+        String url = assertDoesNotThrow(() -> urlTransactionService.getOriginalUrl(TEST_EXAMPLE_SHORT_URL_PATH_ID));
         assertEquals(TEST_EXAMPLE_ORIGINAL_URL, url);
-        verify(shortenedUrlRepository).findByShortUrl(TEST_EXAMPLE_SHORT_URL);
+        verify(shortenedUrlRepository).findByShortCode(TEST_EXAMPLE_SHORT_CODE);
     }
 
     @Test
     void testGetOriginalUrlThrowsUrlNotFoundExceptions() {
-        given(shortenedUrlRepository.findByShortUrl(any(String.class))).willReturn(Optional.empty());
+        given(shortenedUrlRepository.findByShortCode(any(String.class))).willReturn(Optional.empty());
         RedirectUrlNotFoundException notFoundException = assertThrows(
                 RedirectUrlNotFoundException.class,
-                () -> urlService.getOriginalUrl(TEST_EXAMPLE_SHORT_URL_PATH_ID)
+                () -> urlTransactionService.getOriginalUrl(TEST_EXAMPLE_SHORT_URL_PATH_ID)
         );
         assertEquals("URL not found", notFoundException.getMessage());
-        verify(shortenedUrlRepository).findByShortUrl(any(String.class));
+        verify(shortenedUrlRepository).findByShortCode(any(String.class));
     }
 
     @Test
     void testGetOriginalUrlThrowsUrlExpiredException() {
-        given(shortenedUrlRepository.findByShortUrl(any(String.class))).willReturn(Optional.of(ShortenedUrl.builder()
+        given(shortenedUrlRepository.findByShortCode(any(String.class))).willReturn(Optional.of(ShortenedUrl.builder()
                 .createdAt(OffsetDateTime.now(TimeZone.getDefault().toZoneId()).minusMinutes(60))
                 .expiresAt(OffsetDateTime.now(TimeZone.getDefault().toZoneId()).minusMinutes(10))
                 .build()
         ));
         RedirectUrlExpiredException urlExpiredException = assertThrows(
                 RedirectUrlExpiredException.class,
-                () -> urlService.getOriginalUrl(TEST_EXAMPLE_SHORT_URL_PATH_ID)
+                () -> urlTransactionService.getOriginalUrl(TEST_EXAMPLE_SHORT_URL_PATH_ID)
         );
         assertEquals("URL is expired", urlExpiredException.getMessage());
-        verify(shortenedUrlRepository).findByShortUrl(any(String.class));
+        verify(shortenedUrlRepository).findByShortCode(any(String.class));
     }
 
     @Test

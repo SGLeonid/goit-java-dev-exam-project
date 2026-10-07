@@ -108,7 +108,7 @@ class AuthControllerTest {
         MvcResult registerResult = mockMvc.perform(MockMvcRequestBuilders.post("/api/v1/auth/register")
                 .contentType(APPLICATION_JSON_UTF8)
                 .content(json)
-        ).andExpect(status().isForbidden()).andExpect(content().contentType("application/json")).andReturn();
+        ).andExpect(status().isConflict()).andExpect(content().contentType("application/json")).andReturn();
         String registerResponseJson = registerResult.getResponse().getContentAsString();
         StatusResponse registerResponse = objectMapper.readValue(registerResponseJson, StatusResponse.class);
         assertEquals(Status.SUCH_USER_ALREADY_EXISTS, registerResponse.getError());

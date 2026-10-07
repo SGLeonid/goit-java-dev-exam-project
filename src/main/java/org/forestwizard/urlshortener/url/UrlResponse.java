@@ -14,10 +14,10 @@ public class UrlResponse {
     private final String createdBy;
     private final UrlDTO url;
 
-    public static UrlResponse of(Status status, String createdBy, ShortenedUrl url) {
+    public static UrlResponse of(Status status, String createdBy, String urlFormat, ShortenedUrl url) {
         UrlDTO dto = UrlDTO.builder()
                 .id(url.getId())
-                .shortUrl(url.getShortUrl())
+                .shortUrl(String.format(urlFormat, url.getShortCode()))
                 .originalUrl(url.getOriginalUrl())
                 .createdAt(url.getCreatedAt())
                 .expiresAt(url.getExpiresAt())
