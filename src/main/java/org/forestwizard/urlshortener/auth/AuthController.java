@@ -33,7 +33,7 @@ public class AuthController {
             schema = @Schema(implementation = StatusResponse.class),
             examples = @ExampleObject(value = "{\"error\":\"INVALID_PASSWORD_LENGTH\"}")
     ))
-    @ApiResponse(responseCode = "403", description = "Such user already exists", content = @Content(
+    @ApiResponse(responseCode = "409", description = "Such user already exists", content = @Content(
             mediaType = "application/json",
             schema = @Schema(implementation = StatusResponse.class),
             examples = @ExampleObject(value = "{\"error\":\"SUCH_USER_ALREADY_EXISTS\"}")
@@ -58,7 +58,7 @@ public class AuthController {
             schema = @Schema(implementation = StatusResponse.class),
             examples = @ExampleObject(value = "{\"error\":\"INVALID_USERNAME_LENGTH\"}")
     ))
-    @ApiResponse(responseCode = "403", description = "Invalid username or password", content = @Content(
+    @ApiResponse(responseCode = "401", description = "Invalid username or password", content = @Content(
             mediaType = "application/json",
             schema = @Schema(implementation = StatusResponse.class),
             examples = @ExampleObject(value = "{\"error\":\"INVALID_PASSWORD\"}")
