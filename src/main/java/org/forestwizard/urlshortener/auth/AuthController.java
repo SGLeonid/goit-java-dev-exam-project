@@ -66,7 +66,7 @@ public class AuthController {
     @ApiResponse(responseCode = "404", description = "Such user is not found", content = @Content(
             mediaType = "application/json",
             schema = @Schema(implementation = StatusResponse.class),
-            examples = @ExampleObject(value = "{\"error\":\"SUCH_USER_NOT_EXISTS\"}")
+            examples = @ExampleObject(value = "{\"error\":\"INVALID_USERNAME_OR_PASSWORD\"}")
     ))
     @PostMapping("/login")
     public ResponseEntity<AuthResponse> login(@RequestBody AuthRequest request) {
