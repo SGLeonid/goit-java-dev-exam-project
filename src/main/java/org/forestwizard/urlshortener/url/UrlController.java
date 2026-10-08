@@ -34,7 +34,7 @@ public class UrlController {
     @GetMapping("/expired")
     public ModelAndView expired() {
         ModelAndView view = new ModelAndView(TEMPLATE_EXPIRED);
-        view.setStatus(HttpStatus.BAD_REQUEST);
+        view.setStatus(HttpStatus.GONE);
         return view;
     }
 }

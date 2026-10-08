@@ -15,7 +15,7 @@ import org.springframework.stereotype.Service;
 @Service
 @RequiredArgsConstructor
 public class AuthService implements IAuthService {
-    private static final String USERNAME_CONSTRAINT_NAME = "auth_user_username_unique";
+    private static final String USERNAME_CONSTRAINT_NAME = "auth_user_primary_key";
     private static final int MIN_PASSWORD_LENGTH = 8;
     private static final int MAX_USERNAME_LENGTH = 255;
     private static final int MAX_PASSWORD_LENGTH = 255;

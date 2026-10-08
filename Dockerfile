@@ -10,7 +10,7 @@ RUN ./gradlew dependencies --no-daemon
 COPY src ./src
 RUN ./gradlew bootJar --no-daemon -x test
 
-FROM openjdk:26-ea-slim
+FROM eclipse-temurin:26-jdk
 WORKDIR /app
 RUN groupadd -r nonroot && useradd -r -g nonroot nonroot
 USER nonroot

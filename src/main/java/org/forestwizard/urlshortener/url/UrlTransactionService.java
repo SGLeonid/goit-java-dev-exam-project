@@ -43,8 +43,9 @@ public class UrlTransactionService {
 
     @Transactional(rollbackOn = Exception.class)
     public int update(String username, Long id, UrlCreateRequest request) {
-        OffsetDateTime createdAt = OffsetDateTime.now(ZoneId.systemDefault()).truncatedTo(ChronoUnit.MICROS);
-        OffsetDateTime expiresAt = createdAt.plusMinutes(request.getExpirationTimeMinutes());
+        OffsetDateTime expiresAt = OffsetDateTime.now(ZoneId.systemDefault())
+                .truncatedTo(ChronoUnit.MICROS)
+                .plusMinutes(request.getExpirationTimeMinutes());
         return shortenedUrlRepository.updateByUsernameAndId(username, id, request.getOriginalUrl(), expiresAt);
     }
 
